@@ -276,7 +276,7 @@ def main() -> None:
         make_tracking_plot(tracking_npz, here / "fig_tracking.pdf")
     else:
         print(f"[fig 4] skipped (missing {tracking_npz});"
-              f" run paper_code/_generate_tracking_data.py first")
+              f" run _generate_tracking_data.py first")
     print("done.")
 
 

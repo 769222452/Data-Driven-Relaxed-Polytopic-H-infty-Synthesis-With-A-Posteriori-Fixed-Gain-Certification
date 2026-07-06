@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this code, please cite the associated paper."
-title: "Data-Driven Relaxed Polytopic H-infinity Synthesis With A Posteriori Fixed-Gain Certification"
+title: "Data-driven relaxed polytopic H-infinity synthesis with a posteriori fixed-gain certification"
 authors:
   - family-names: "Zhang"
     given-names: "Yanan"

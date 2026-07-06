@@ -2,14 +2,12 @@
 """
 F-8 short-period 4-aircraft pitch formation model (16D augmented state).
 
-Purpose: Replace the CAV 6D platoon model where MOSEK IPM becomes numerically
-pathological on the Proposed beta-relaxation SDP. F-8 aircraft dynamics are a
-classic ACC-benchmark LMI robust control model (Doyle 1985, Boyd & Barratt 1991)
-with well-conditioned state-space matrices.
+Purpose: reproducibility driver for the DCCVR synthesis, fixed-gain audit,
+and F-8 tracking simulations used in the manuscript.
 
 State: x = [x_1; x_2; x_3; x_4; u_act] in R^16
   x_i = [alpha_i, q_i, theta_i] in R^3 (pitch-axis per aircraft)
-  u_act in R^4 (augmented actuator-integrator state; same structure as CAV)
+  u_act in R^4 (augmented actuator-integrator state)
   Physical state dim = 12 (4 x 3), actuator dim = 4, total = 16.
 
 Input: u in R^4 (each component = elevator rate command for one aircraft)
@@ -53,7 +51,7 @@ import scipy.linalg as la
 
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "f8_benchmark_utils.py")
-_spec = importlib.util.spec_from_file_location("keee_st_base", BASE_PATH)
+_spec = importlib.util.spec_from_file_location("f8_benchmark_utils_base", BASE_PATH)
 if _spec is None or _spec.loader is None:
     raise ImportError(f"Cannot load base module from {BASE_PATH}")
 base = importlib.util.module_from_spec(_spec)
@@ -97,7 +95,7 @@ class F8SynthesisParams:
     # design point. The simulation gust *raw amplitudes* are 1.5x the
     # original (events 0.9 / 1.2, colored noise 0.225, coupling 0.12),
     # but saturate_norm clips the per-step ||d||_2 back to d_max = 0.6.
-    # Empirical effect (see diagnose_rmse_magnitude.py output):
+    # Empirical effect for the fixed-seed rollout:
     #   - pre-saturator peak ||d||_2 = 1.20 (vs 0.80 originally),
     #   - post-saturator peak ||d||_2 = 0.60 (cap, unchanged),
     #   - post-saturator MEAN ||d||_2 = 0.196 (vs 0.158 originally; +24%),
@@ -311,8 +309,7 @@ def _zoh_discretize(Ac: np.ndarray, Bc: np.ndarray, Sc: np.ndarray, Ts: float) -
 def build_vertex_matrices(p: Dict[str, float], Ts: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Build 16D augmented (A, B, S_aug) = 12D physical plant + 4D actuator integrator.
 
-    Layout identical to CAV 6D convention (x[12:16] are 4 actuator-integrator states,
-    u = commanded rate).
+    Layout: x[12:16] are actuator-integrator states and u is the commanded rate.
     """
     Ac, Bc, Sc = _f8_formation_continuous(p)
     Ad, Bd, Sd = _zoh_discretize(Ac, Bc, Sc, Ts)
@@ -370,11 +367,10 @@ def worst_case_S_matrix(bounds: F8ParamBounds, syn: F8SynthesisParams) -> np.nda
 
 
 # ---------------------------------------------------------
-# Monkey-patch base so that keee-st's internal builders/ICE
-# operate on the F-8 formation plant matrices defined above.
+# Install the F-8 plant hooks used by the shared utility module.
 # ---------------------------------------------------------
 def _f8_build_vertex_matrices_compat(p: Dict[str, float], Ts: float, g: float = 0.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Signature-compatible replacement for keee-st.build_vertex_matrices.
+    """Signature-compatible replacement for the utility vertex builder.
     The ``g`` argument is ignored (F-8 bakes g/V into matrix constants)."""
     return build_vertex_matrices(p, Ts)
 
@@ -397,10 +393,10 @@ base.enumerate_vertices = _f8_enumerate_vertices
 
 
 # ---------------------------------------------------------
-# Config conversion: F8SynthesisParams -> keee-st SynthesisParams
+# Config conversion: F8SynthesisParams -> shared SynthesisParams
 # ---------------------------------------------------------
 def f8_to_base_syn(syn: "F8SynthesisParams") -> "base.SynthesisParams":
-    """Pack F-8 user-facing config into the keee-st SynthesisParams dataclass
+    """Pack F-8 user-facing config into the shared SynthesisParams dataclass
     so that all base-module helpers see the same synthesis knobs."""
     return base.SynthesisParams(
         Ts=syn.Ts,
@@ -496,9 +492,8 @@ def solve_pdl_hinf_mosek(
         raise ValueError("PDL-Hinf: empty vertex list")
 
     # MOSEK license: configure_mosek_license() honours the
-    # MOSEKLM_LICENSE_FILE env var first and only falls back to a local
-    # legacy path internally; we therefore pass no path argument here
-    # so this file contains no hard-coded license path.
+    # MOSEKLM_LICENSE_FILE env var and caller-provided paths, so this
+    # file contains no hard-coded license path.
     base.configure_mosek_license(verbose=False)
 
     M = mf.Model("pdl_hinf")
@@ -563,7 +558,7 @@ def solve_pdl_hinf_mosek(
             D_i = np.asarray(v["D"], dtype=float)
             # Use the shared scaled_disturbance_matrix helper so that
             # PDL-Hinf, DCCVR beta-off, and QS-Hinf synthesis (in
-            # keee-st.solve_vertex_fusion_sdp_mosek), the audit SDP and
+            # solve_vertex_fusion_sdp_mosek), the audit SDP and
             # the full-box diagnostic all carry the same normalised-
             # disturbance convention tilde S = d_cert * S; gamma is
             # therefore the induced L2 gain from w (||w||_2 <= 1) to z.
@@ -1209,7 +1204,7 @@ def _audit_fixed_K_on_core(
         # Normalised-disturbance convention: tilde S = d_cert * S
         # (see scaled_disturbance_matrix doc above). gamma_core is the
         # induced L2 gain from w (||w||_2 <= 1) to z, exactly the same
-        # channel used by the synthesis LMI in keee-st.solve_vertex_fusion_sdp.
+        # channel used by the synthesis LMI in solve_vertex_fusion_sdp.
         d_cert = float(syn.d_max)
         for i, v in enumerate(core_verts):
             A = np.asarray(v["A"], dtype=float)
@@ -1385,7 +1380,7 @@ def _repair_K_with_data_core(
         M.setSolverParam("intpntCoTolRelGap", float(rel_gap))
         M.setSolverParam("optimizerMaxTime", float(time_limit_sec))
 
-        # Variables (mirror the synthesis SDP layout in keee-st).
+        # Variables mirror the synthesis SDP layout.
         # gamma2 and t are scalars (no size arg) so that
         # mf.Expr.mul(matrix, scalar) broadcasts correctly.
         Q = M.variable("Q", mf.Domain.inPSDCone(n))
@@ -1845,7 +1840,8 @@ def synthesize_f8_controllers(
     # certificate is then established on the FULL 16-corner set via the
     # worst-case S_c matrix and the corner-sweep audit -- the data-driven
     # Psi extrapolates to the unstable corners through this worst-case
-    # disturbance gain, exactly the same construction used in keee-st CAV.
+    # disturbance gain, using the same disturbance-channel construction
+    # as the synthesis and audit LMIs.
     # This keeps the data rollout separate from the unstable corners.
     rng_data = np.random.default_rng(syn.seed + 999)
     p_data_source: Dict[str, float] = {}
@@ -2019,8 +2015,7 @@ def synthesize_f8_controllers(
     # --- NoRelax-ProposedActive ablation: SAME active set chosen by ICE for Proposed,
     # but s_i = 0 (no beta-relaxation slack). This isolates the effect of
     # beta-relaxation from any active-set selection effect; controlling for
-    # the active set is the standard ablation protocol. (Previously named
-    # 'BaselineB'; renamed to reflect what it actually measures.)
+    # the active set is the standard ablation protocol.
     verts_norelax = [dict(v, s=0.0) for v in verts_common]
     if verbose:
         print(f"\n[F8 NoRelax-ProposedActive] same active set ({len(verts_norelax)} vertices), s_i=0")

@@ -1,4 +1,4 @@
-# Data-Driven Relaxed Polytopic H-infinity Synthesis With A Posteriori Fixed-Gain Certification
+# Data-driven relaxed polytopic H-infinity synthesis with a posteriori fixed-gain certification
 
 This repository contains the reproducibility code and cached numerical
 results for the paper on data-driven relaxed polytopic H-infinity state
@@ -11,7 +11,7 @@ figure generation used in the manuscript.
 ## Repository layout
 
 - `acc_f8_formation_16d.py`: main synthesis, audit, and simulation driver.
-- `f8_benchmark_utils.py`: F-8 benchmark model and utility routines.
+- `f8_benchmark_utils.py`: shared SDP, ICE, plotting, and simulation helpers.
 - `matrix_hull.py`: barycentric matrix-hull diagnostic.
 - `sanity_check.py`: consistency checks against cached result files.
 - `_generate_tracking_data.py`: tracking-history export helper.
