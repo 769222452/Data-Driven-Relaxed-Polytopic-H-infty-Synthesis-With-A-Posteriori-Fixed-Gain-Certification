@@ -1,0 +1,7 @@
+method,RMSE,K_norm,feasible,gamma_core,core_max_eig,full_box_max_eig,cond_P,n_core,decay_rate,worst_audit_vertex_index,worst_audit_kappa,worst_audit_za_v,worst_audit_m_alpha,worst_audit_m_q,worst_audit_m_de,rho_closed_loop_at_worst_vertex,rho_closed_loop_max_over_core,status
+Proposed,0.0186858,13.0753,True,2.93406,-5.608762e-07,+1.473101e+00,741.929,32,1,9,0.5,0.500211,4.88372,-0.499347,3.00325,0.981198,0.981784,SolutionStatus.Optimal
+NoRelax-ProposedActive,0.0428539,24.8814,True,3.29759,-1.027679e-06,+4.104080e+01,2502.35,32,1,9,0.5,0.500211,4.88372,-0.499347,3.00325,0.974798,0.975091,SolutionStatus.Optimal
+Core-CQLF-Hinf,0.0218299,4.0172,True,18.961,-2.262561e-07,+7.188839e+01,56.2132,32,1,13,0.5,0.500211,4.88372,2.49864,3.00325,0.997425,0.99743,SolutionStatus.Optimal
+QS-Hinf,0.0249389,3.96876,True,24.3918,-2.581752e-07,+1.044089e+02,47.2608,32,1,12,1,0.500211,4.88372,2.49864,3.00325,0.997943,0.997943,SolutionStatus.Optimal
+PDL-Hinf,0.0614996,39.6829,True,5.77795,-5.263712e-07,+1.056428e+02,5032.64,32,1,1,0.5,0.500211,-1.01826,-0.499347,3.00325,0.960904,0.968468,SolutionStatus.Optimal
+RobustLQR,0.0259873,7.56163,True,4.76019,-2.338812e-07,+7.165135e+00,139.775,32,1,12,1,0.500211,4.88372,2.49864,3.00325,0.990361,0.990361,SolutionStatus.Optimal
