@@ -52,7 +52,7 @@ import numpy as np
 import scipy.linalg as la
 
 
-BASE_PATH = os.path.join(os.path.dirname(__file__), "keee-st.py")
+BASE_PATH = os.path.join(os.path.dirname(__file__), "f8_benchmark_utils.py")
 _spec = importlib.util.spec_from_file_location("keee_st_base", BASE_PATH)
 if _spec is None or _spec.loader is None:
     raise ImportError(f"Cannot load base module from {BASE_PATH}")

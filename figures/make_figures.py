@@ -8,7 +8,7 @@ Produces:
   - figures/fig_mc_boxplot.pdf       (Monte Carlo RMSE boxplot)
   - figures/fig_tracking.pdf         (tracking time histories)
 
-Style: Wong (2011) colour-blind-friendly palette, identical to the
+Style: Wong (2011) color-blind-friendly palette, identical to the
 in-simulation plotter (acc_f8_formation_16d.py). Type-1 fonts so the
 PDF embeds editable text in the camera-ready submission.
 """
@@ -140,7 +140,7 @@ def make_mc_boxplot(mc_csv: Path, out_pdf: Path) -> None:
 
     fig.savefig(out_pdf, bbox_inches="tight")
     plt.close(fig)
-    print(f"[fig 1] wrote {out_pdf}")
+    print(f"[mc] wrote {out_pdf}")
 
 
 # -----------------------------------------------------------------

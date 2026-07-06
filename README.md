@@ -11,7 +11,7 @@ figure generation used in the manuscript.
 ## Repository layout
 
 - `acc_f8_formation_16d.py`: main synthesis, audit, and simulation driver.
-- `keee-st.py`: F-8 benchmark model and utility routines.
+- `f8_benchmark_utils.py`: F-8 benchmark model and utility routines.
 - `matrix_hull.py`: barycentric matrix-hull diagnostic.
 - `sanity_check.py`: consistency checks against cached result files.
 - `_generate_tracking_data.py`: tracking-history export helper.
