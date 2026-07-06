@@ -8,8 +8,9 @@ script re-simulates the controllers on:
   (a) the nominal plant            -> key prefix ``nominal``
   (b) the hard-core synthesis stress corner (max rho_OL among the
       score-supported s=0 vertices)  -> key prefix ``hc_worst``
-  (c) the adversarial worst corner (max rho_OL over the full 16-corner
-      box, regardless of data consistency; out of the audit hull)
+  (c) the adversarial worst corner (max rho_OL over the physical
+      aerodynamic corners, regardless of data consistency; out of the
+      audit hull)
       -> key prefix ``worst``
 
 using the identical reference and disturbance signals as the main

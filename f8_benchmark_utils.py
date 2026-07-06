@@ -700,7 +700,7 @@ def compute_si_from_vi(
         direct implementation of paper Eq. (4); no post-promotion in
         downstream ICE is required.
 
-    n_hc = 0 (legacy): keep tau_D = tau (default 0); if fewer than
+    n_hc = 0: keep tau_D = tau (default 0); if fewer than
         hard_ratio_min vertices satisfy r_i <= tau, fall back to the
         rho-quantile of {r_i}. Retained for backward compatibility with
         scripts that previously combined this routine with the ICE flag
@@ -1600,8 +1600,8 @@ def iterative_constraint_exchange(
     lowest-residual vertices (paper Eq. (4), 1:1). In that mode, this
     routine only protects the existing hard-core vertices when
     force_include_hard_core=True. The optional force_top_n_hard_core
-    argument is retained only for legacy scripts and should normally be
-    left at zero.
+    argument is retained for compatibility with older runs and should
+    normally be left at zero.
 
     Implementation notes:
     - The initial active set is selected by stratified farthest sampling.

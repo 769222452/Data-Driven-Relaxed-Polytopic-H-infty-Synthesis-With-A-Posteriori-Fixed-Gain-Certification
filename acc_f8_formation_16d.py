@@ -15,7 +15,7 @@ Disturbance: w in R^6 (shared vertical gust, per-aircraft pitching gust, formati
 
 Uncertain parameters (shared across all 4 aircraft, 4 boolean dims -> 16 vertices).
 
-IMPORTANT convention note -- opposite sign of Etkin/Stevens-Lewis textbook:
+Sign-convention note:
 This file uses pitch-stiffness / pitch-damping *magnitudes* with the plant
 matrix hard-coded as dq/dt = -m_alpha*alpha - m_q*q - m_de*u. Hence:
     m_alpha > 0  <=>  statically stable  (A[1,0] = -m_alpha < 0)
@@ -23,9 +23,7 @@ matrix hard-coded as dq/dt = -m_alpha*alpha - m_q*q - m_de*u. Hence:
 In the Etkin / Stevens-Lewis convention, the pitching-moment derivative
 M_alpha satisfies M_alpha < 0 <=> stable. Our m_alpha therefore equals
 -M_alpha (up to a positive scaling by 1/Iyy). The parameter box is chosen
-so that m_alpha spans zero, exercising the static-stability sign change
-that is the canonical hard-case in the F-8 literature (Garrard & Jordan,
-1977 used exactly this symmetric box).
+so that m_alpha spans zero, exercising a static-stability sign change.
 
   za_v    Z_alpha / V                (lift / speed; positive)
   m_alpha -M_alpha (+ = stable)      (negative -> static instability)
@@ -68,7 +66,7 @@ from matrix_hull import matrix_hull_residual  # noqa: E402
 # ---------------------------------------------------------
 @dataclass(frozen=True)
 class F8ParamBounds:
-    # F-8 Garrard-Jordan (1977) cross-Mach setting (aggressive ACC variant):
+    # F-8 cross-Mach style setting used for the numerical benchmark:
     #   m_alpha spans -2..+5   -> open-loop static stability flips across
     #                              the box (m_alpha<0 means statically
     #                              unstable; see file header on sign),
@@ -76,7 +74,7 @@ class F8ParamBounds:
     #   m_de    spans  3 ..+7.5  -> 2.5x elevator-effectiveness range,
     #   za_v    spans 0.5..+1.5  -> 3x lift-coefficient range.
     # Corners with m_alpha < 0 are open-loop statically unstable; the
-    # corner-sweep audit verifies all 16 vertices independently of any K.
+    # corner sweep evaluates all 16 physical aerodynamic corners.
     za_v: Tuple[float, float] = (0.5, 1.5)        # Z_alpha / V (positive)
     m_alpha: Tuple[float, float] = (-2.0, 5.0)    # -M_alpha (>0 stable)
     m_q: Tuple[float, float] = (-0.5, 2.5)        # -M_q     (>0 damped)
@@ -108,10 +106,7 @@ class F8SynthesisParams:
     # resulting K had rho_closed > 1 on 100% of corners.
     d_max: float = 0.6
     # The data-core rejection uses datacore_dbar (= bar d_data in the
-    # paper); a separate ``data_d_max`` field used to exist here as a
-    # diagnostic stub but was never consumed by the current pipeline
-    # and caused confusion with bar d_cert (= d_max). It has been
-    # removed; use ``datacore_dbar`` below whenever bar d_data is needed.
+    # paper), while d_max above is the synthesis/audit disturbance scale.
     du_max: float = 0.8
     u_abs_min: Tuple[float, float, float, float] = (-0.4, -0.4, -0.4, -0.4)
     u_abs_max: Tuple[float, float, float, float] = (0.4, 0.4, 0.4, 0.4)
@@ -136,7 +131,6 @@ class F8SynthesisParams:
     n_low_support_points: int = 1
     support_sample_count: int = 400
     support_spread: float = 0.30
-    baselineB_ratios: Tuple[float, float, float] = (0.4, 0.2, 0.4)
     # Monte Carlo sample size: 100 trials is the ACC / Boyd-et-al. minimum
     # for reliable p95 / p99 quantile estimates; 20 trials gives a p95
     # confidence interval almost as wide as the point estimate itself and
@@ -347,7 +341,8 @@ def sample_params(bounds: F8ParamBounds, rng: np.random.Generator) -> Dict[str, 
 
 # ---------------------------------------------------------
 # Worst-case disturbance gain (used to extend the data-driven Psi over
-# the full 16-corner box even when batch data only covers nominal-side).
+# the physical 16-corner aerodynamic box even when batch data only
+# covers the nominal side).
 # ---------------------------------------------------------
 def worst_case_S_matrix(bounds: F8ParamBounds, syn: F8SynthesisParams) -> np.ndarray:
     keys = list(bounds.__dataclass_fields__.keys())
@@ -1144,8 +1139,8 @@ def _audit_fixed_K_on_core(
       status             : MOSEK problem status string
     """
     import mosek.fusion as mf
-    # Delegated MOSEK license discovery: env var first, legacy fallback
-    # in the helper itself. No hard-coded path here.
+    # Delegated MOSEK license discovery: environment variable or
+    # caller-provided path. No hard-coded path here.
     base.configure_mosek_license(verbose=False)
 
     n = 16
@@ -1352,8 +1347,8 @@ def _repair_K_with_data_core(
     core); when lambda_close -> inf it asymptotes back to K_prop.
     """
     import mosek.fusion as mf
-    # Delegated MOSEK license discovery: env var first, legacy fallback
-    # in the helper itself. No hard-coded path here.
+    # Delegated MOSEK license discovery: environment variable or
+    # caller-provided path. No hard-coded path here.
     base.configure_mosek_license(verbose=False)
 
     n = 16; nu = 4; nw = 6; nz = 16
@@ -1837,11 +1832,10 @@ def synthesize_f8_controllers(
     # of the full parameter box because the data-collection rollout uses
     # K_nominal as a stabilising controller, and K_nominal cannot stabilise
     # the open-loop-unstable corners of the box (m_alpha < 0). The robust
-    # certificate is then established on the FULL 16-corner set via the
-    # worst-case S_c matrix and the corner-sweep audit -- the data-driven
-    # Psi extrapolates to the unstable corners through this worst-case
-    # disturbance gain, using the same disturbance-channel construction
-    # as the synthesis and audit LMIs.
+    # the full physical corners are still evaluated later as diagnostic
+    # stress tests. The data-driven Psi is built with a worst-case
+    # disturbance-channel matrix, using the same disturbance-channel
+    # construction as the synthesis and audit LMIs.
     # This keeps the data rollout separate from the unstable corners.
     rng_data = np.random.default_rng(syn.seed + 999)
     p_data_source: Dict[str, float] = {}
@@ -2152,13 +2146,13 @@ def synthesize_f8_controllers(
     # True polytopic guaranteed-cost robust LQR LMI on all 32 vertices
     # (Boyd-Feron-El Ghaoui-Balakrishnan 1994 LMI book Sec. 7.4.2;
     # discrete-time analog of Petersen 1995 modified Riccati). Unlike the
-    # earlier worst-vertex DARE heuristic (solve_robust_lqr_wv), the
+    # worst-vertex DARE heuristic (solve_robust_lqr_wv), the
     # Lyapunov function X is enforced on every vertex of the polytope.
     # RobustLQR-LMI does NOT supply an H-infinity certificate (gamma_robust_lqr
     # is set to inf), but it provides a polytope-uniform quadratic-cost
     # upper bound tr(W) >= tr(X^{-1}) -- the textbook robust-LQR analogue of
-    # the H-infinity designs above. The (deprecated) worst-vertex DARE
-    # heuristic K is computed alongside for diagnostic comparison only.
+    # the H-infinity designs above. The worst-vertex DARE heuristic is
+    # computed alongside for diagnostic comparison only.
     sol_rlqr_lmi = solve_robust_lqr_polytopic_lmi(
         verts_norm, syn, verbose=False, num_threads=0, max_iters=200,
         rel_gap=1e-6, time_limit_sec=1800,
@@ -2176,8 +2170,8 @@ def synthesize_f8_controllers(
         if verbose:
             print("  [WARN] RobustLQR-LMI infeasible -- falling back to "
                   "worst-vertex DARE heuristic.")
-    # Diagnostics from the (deprecated) worst-vertex heuristic. These are
-    # kept for reproducibility / comparison but no longer drive K.
+    # Diagnostics from the worst-vertex heuristic. These are kept for
+    # reproducibility and comparison but do not drive K.
     wv_diag = solve_robust_lqr_wv(bounds, syn)
     robust_lqr_p_worst = wv_diag["p_worst"]
     robust_lqr_rho_ol = wv_diag["rho_ol"]

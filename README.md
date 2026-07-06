@@ -71,9 +71,9 @@ MOSEK settings.
 
 ## Notes on method names
 
-Some internal result keys retain legacy names used during numerical
-experiments. In the manuscript, the proposed controller is referred to
-as DCCVR, and the no-relaxation ablation is DCCVR (`beta=0`).
+Cached result keys use the controller labels from the numerical scripts.
+In the manuscript, the proposed controller is referred to as DCCVR, and
+the no-relaxation ablation is DCCVR (`beta=0`).
 
 ## License
 
