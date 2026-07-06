@@ -10,7 +10,6 @@ Sources:
   acc_f8_formation_results/acc_f8_formation_results.npz   (synthesis,
        nominal/worst, corner sweep aggregates)
   acc_f8_formation_results/monte_carlo/F8_monte_carlo_summary.csv
-  acc_f8_formation_results/pdl_hinf_decay_ablation/F8_pdl_decay_ablation.csv
 """
 from __future__ import annotations
 
@@ -56,8 +55,6 @@ def _require_file(path: Path) -> None:
             f"  {path}\n"
             f"Run the full reproducibility pipeline first:\n"
             f"  python acc_f8_formation_16d.py\n"
-            f"  python _pdl_hinf_decay_ablation.py\n"
-            f"  python _augment_npz_scores.py\n"
             f"  python _generate_tracking_data.py"
         )
 
@@ -65,27 +62,20 @@ def _require_file(path: Path) -> None:
 def load_sources():
     npz_path = SIM_ROOT / "acc_f8_formation_results.npz"
     mc_path = SIM_ROOT / "monte_carlo" / "F8_monte_carlo_summary.csv"
-    abl_path = SIM_ROOT / "pdl_hinf_decay_ablation" / "F8_pdl_decay_ablation.csv"
     audit_path = SIM_ROOT / "fixed_k_audit.csv"
     syn_audit_path = SIM_ROOT / "synthesis_audit_consistency.csv"
-    for p in (npz_path, mc_path, abl_path, audit_path, syn_audit_path):
+    for p in (npz_path, mc_path, audit_path, syn_audit_path):
         _require_file(p)
     npz = np.load(npz_path)
     mc = read_csv_columns(mc_path)
-    abl = read_csv_columns(abl_path)
     audit = read_csv_columns(audit_path)
     syn_audit = read_csv_columns(syn_audit_path)
-    return npz, mc, abl, audit, syn_audit
+    return npz, mc, audit, syn_audit
 
 
 def mc_lookup(mc: Dict[str, List[str]], controller: str, field: str) -> float:
     idx = mc["Controller"].index(controller)
     return float(mc[field][idx])
-
-
-def abl_lookup(abl: Dict[str, List[str]], controller: str, field: str) -> float:
-    idx = abl["Controller"].index(controller)
-    return float(abl[field][idx])
 
 
 def csv_lookup(tab: Dict[str, List[str]], key_col: str, key: str, field: str) -> str:
@@ -139,7 +129,7 @@ def section(title: str) -> None:
 # -----------------------------------------------------------------
 def main() -> None:
     global PASS, FAIL
-    npz, mc, abl, audit, syn_audit = load_sources()
+    npz, mc, audit, syn_audit = load_sources()
 
     # -------------------- Table II: Synthesis diagnostics ----------
     section("Table II  Synthesis diagnostics")
@@ -385,35 +375,6 @@ def main() -> None:
     # medians).
     p95_rad = mc_lookup(mc, "Proposed", "RMSE_theta_p95")
     check("Proposed p95 [deg]", 1.630, np.degrees(p95_rad), rtol=2e-2)
-
-    # -------------------- PDL decay-rate ablation (supplementary) -
-    # NOTE: this block is a *reproducibility* check on the
-    # _pdl_hinf_decay_ablation.py CSV; the corresponding numbers are
-    # supplementary and NOT cited in the paper body (the published
-    # PDL-Hinf row uses the default decay rate lambda_pdl = 0.95).
-    section("Reproducibility check  PDL decay-rate ablation CSV")
-    # Pinned values at lambda_pdl^2 = 0.95 / 0.90 / 0.85
-    for paper_decay, paper_g, paper_kn, paper_kmax, paper_unst, paper_mc in [
-        (0.95, 5.14,  39.72,  15.88, 12.50, 0.0538),
-        (0.90, 10.88, 71.97,  30.61, 18.75, 0.0697),
-        (0.85, 38.16, 121.48, 51.12, 25.00, 0.0859),
-    ]:
-        # Match by controller name; PDL-Hinf rows in CSV have decay_rate column
-        idx = None
-        for i, c in enumerate(abl["Controller"]):
-            if c.startswith("PDL-Hinf") and abs(float(abl["decay_rate"][i]) - paper_decay) < 1e-3:
-                idx = i; break
-        if idx is None:
-            FAIL += 1
-            FAILURES.append(f"  [FAIL] PDL ablation row alpha^2={paper_decay}: not found in CSV")
-            continue
-        gamma_col = "gamma_syn_diag" if "gamma_syn_diag" in abl else "gamma"
-        check(f"PDL alpha2={paper_decay} gamma_syn_diag", paper_g, float(abl[gamma_col][idx]))
-        check(f"PDL alpha2={paper_decay} ||K||_F", paper_kn,   float(abl["K_norm"][idx]))
-        check(f"PDL alpha2={paper_decay} max|K|",  paper_kmax, float(abl["K_max_abs"][idx]))
-        check(f"PDL alpha2={paper_decay} unst%",   paper_unst, float(abl["corner_unstable"][idx]) * 100.0,
-              rtol=2e-2)
-        check(f"PDL alpha2={paper_decay} MC med",  paper_mc,   float(abl["mc_rmse_median"][idx]))
 
     # -------------------- paper-text scope wording scan -----------
     # Avoid global stale-number scans: some old numeric values can

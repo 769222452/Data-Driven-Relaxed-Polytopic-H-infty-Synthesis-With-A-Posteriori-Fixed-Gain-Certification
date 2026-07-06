@@ -15,8 +15,6 @@ figure generation used in the manuscript.
 - `matrix_hull.py`: barycentric matrix-hull diagnostic.
 - `sanity_check.py`: consistency checks against cached result files.
 - `_generate_tracking_data.py`: tracking-history export helper.
-- `_augment_npz_scores.py`: score metadata export helper.
-- `_pdl_hinf_decay_ablation.py`: supplementary PDL-Hinf decay-rate check.
 - `acc_f8_formation_results/`: cached CSV, NPZ, and per-scenario outputs.
 - `figures/`: paper figure PDFs and the script used to regenerate them.
 
@@ -63,8 +61,6 @@ To rerun the main pipeline from scratch, use
 ```bash
 python acc_f8_formation_16d.py
 python _generate_tracking_data.py
-python _augment_npz_scores.py
-python _pdl_hinf_decay_ablation.py
 python figures/make_figures.py
 python sanity_check.py
 ```

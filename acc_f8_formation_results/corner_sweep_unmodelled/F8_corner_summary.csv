@@ -1,5 +1,0 @@
-Controller,n_corners,rmse_median,rmse_max,peak_max,rho_max,unstable_rate
-Proposed,16,0.0471238,191.918,1558.22,0.981039,0.125
-BaselineB,16,0.155223,3696.6,37514.8,0.975539,0.25
-NominalLQR,16,0.0327411,0.225753,0.515744,0.983626,0
-RobustLQR_WV,16,0.0418895,0.222262,0.469515,0.987801,0

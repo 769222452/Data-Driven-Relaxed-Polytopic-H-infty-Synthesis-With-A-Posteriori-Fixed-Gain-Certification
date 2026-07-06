@@ -562,7 +562,7 @@ def solve_pdl_hinf_mosek(
             C_i = np.asarray(v["C"], dtype=float)
             D_i = np.asarray(v["D"], dtype=float)
             # Use the shared scaled_disturbance_matrix helper so that
-            # PDL-Hinf, the Proposed/Ablation-betaoff/QS-Hinf synthesis (in
+            # PDL-Hinf, DCCVR beta-off, and QS-Hinf synthesis (in
             # keee-st.solve_vertex_fusion_sdp_mosek), the audit SDP and
             # the full-box diagnostic all carry the same normalised-
             # disturbance convention tilde S = d_cert * S; gamma is
@@ -1846,8 +1846,7 @@ def synthesize_f8_controllers(
     # worst-case S_c matrix and the corner-sweep audit -- the data-driven
     # Psi extrapolates to the unstable corners through this worst-case
     # disturbance gain, exactly the same construction used in keee-st CAV.
-    # We document this explicitly so reviewers can verify there is no
-    # information leak from the unstable corners into Psi.
+    # This keeps the data rollout separate from the unstable corners.
     rng_data = np.random.default_rng(syn.seed + 999)
     p_data_source: Dict[str, float] = {}
     for k in bounds.__dataclass_fields__.keys():
@@ -1920,9 +1919,8 @@ def synthesize_f8_controllers(
             # (A, scale*B) is a linear image of the full-gain counterpart
             # (A, B) under the multiplicative input-gain uncertainty. We
             # inherit s from the full-gain vertex rather than:
-            #  (a) recomputing s via the original Psi -- reviewer would
-            #      ask "why reuse that Psi if the scaled plant was not
-            #      observed in the batch rollout?";
+            #  (a) recomputing s via the original Psi even though the
+            #      scaled plant was not observed in the batch rollout;
             #  (b) forcing s = 0 -- this degenerates ICE's active-set
             #      selection: treating 16 plants as perfectly data-
             #      consistent collapses the SDP to a NoRelax-ProposedActive-like
@@ -2071,7 +2069,7 @@ def synthesize_f8_controllers(
         print(f"\n[F8 QS-Hinf (Boyd 1994)] single-Q H-inf over all {len(verts_norm)} vertices, beta=0")
     verts_qs = [dict(v, s=0.0) for v in verts_norm]
     # Note: the classical Boyd'94 formulation contains only the H-infinity
-    # LMI; the supplementary mu-performance LMI (enforce_perf_all_vertices
+    # LMI; the additional mu-performance LMI (enforce_perf_all_vertices
     # = True) is an extension layer not present in the 1994 monograph, and
     # activating it on 32 vertices with single-Q produces a numerically
     # ill-conditioned SDP (MOSEK returns status=Unknown). We therefore
